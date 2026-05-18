@@ -2,18 +2,19 @@ import csv
 import logging
 import os
 from datetime import datetime
-from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
 
 from config import (
-    TARGET_URL,
     CSV_OUTPUT_DIR,
     LOG_FILE_NAME,
     USE_KEYWORDS_FILTER,
     KEYWORDS,
 )
+
+from scrapers.yahoo import fetch_yahoo_news
+from scrapers.itmedia import fetch_itmedia_news
+
 
 os.makedirs("logs", exist_ok=True)
 os.makedirs("output", exist_ok=True)
@@ -25,59 +26,64 @@ logging.basicConfig(
     encoding="utf-8",
 )
 
-def fetch_news():
-    articles = []
-    seen_urls = set()
-    scraped_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    response = requests.get(TARGET_URL, timeout=10)
-    response.raise_for_status()
+def filter_articles_by_keywords(articles):
+    if not USE_KEYWORDS_FILTER:
+        return articles
 
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    for link in soup.find_all("a"):
-        title = link.get_text(strip=True)
-        href = link.get("href")
-
-        if not title or not href:
-            continue
-
-        if "news.yahoo.co.jp/articles/" not in href:
-            continue
-
-        if href in seen_urls:
-            continue
-
-        if USE_KEYWORDS_FILTER and not any(keyword in title for keyword in KEYWORDS):
-            continue
-
-        seen_urls.add(href)
-
-        articles.append({
-            "title": title,
-            "url": href,
-            "scraped_at": scraped_at,
-        })
-
-    return articles
+    return [
+        article for article in articles
+        if any(keyword in article["title"] for keyword in KEYWORDS)
+    ]
 
 
 def save_to_csv(articles, csv_file_name):
     with open(csv_file_name, "w", encoding="utf-8-sig", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=["title", "url", "scraped_at"])
+        writer = csv.DictWriter(
+            file,
+            fieldnames=["title", "url", "source", "scraped_at"]
+        )
         writer.writeheader()
         writer.writerows(articles)
+
+def save_csv_by_source(articles, timestamp):
+    articles_by_source = {}
+
+    for article in articles:
+        source = article["source"]
+        articles_by_source.setdefault(source, []).append(article)
+
+    for source, source_articles in articles_by_source.items():
+        if source == "Yahoo!ニュース":
+            file_name = f"{CSV_OUTPUT_DIR}/yahoo_news_{timestamp}.csv"
+        elif source == "ITmedia NEWS":
+            file_name = f"{CSV_OUTPUT_DIR}/itmedia_news_{timestamp}.csv"
+        else:
+            file_name = f"{CSV_OUTPUT_DIR}/news_{timestamp}.csv"
+
+        save_to_csv(source_articles, file_name)
 
 
 def main():
     try:
         logging.info("ニュース取得処理を開始しました。")
 
-        articles = fetch_news()
+        scraped_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        csv_file_name = f"{CSV_OUTPUT_DIR}/news_{timestamp}.csv"
+        csv_file_name = f"{CSV_OUTPUT_DIR}/all_news_{timestamp}.csv"
+
+        articles = []
+
+        articles.extend(fetch_yahoo_news())
+        articles.extend(fetch_itmedia_news())
+
+        articles = filter_articles_by_keywords(articles)
+
+        for article in articles:
+            article["scraped_at"] = scraped_at
 
         save_to_csv(articles, csv_file_name)
+        save_csv_by_source(articles, timestamp)
 
         if len(articles) == 0:
             logging.warning("該当するニュースが0件でした。")

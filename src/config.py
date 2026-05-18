@@ -7,7 +7,7 @@ CSV_OUTPUT_DIR = "output"
 LOG_FILE_NAME = "logs/scraping.log"
 
 # キーワード絞り込みを使うか
-USE_KEYWORDS_FILTER = False
+USE_KEYWORDS_FILTER = True
 
 # 絞り込み対象キーワード
 KEYWORDS = ["AI", "Python", "IT"]
