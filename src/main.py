@@ -2,13 +2,14 @@ import csv
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
 
 from config import (
     TARGET_URL,
-    CSV_FILE_NAME,
+    CSV_OUTPUT_DIR,
     LOG_FILE_NAME,
     USE_KEYWORDS_FILTER,
     KEYWORDS,
@@ -61,8 +62,8 @@ def fetch_news():
     return articles
 
 
-def save_to_csv(articles):
-    with open(CSV_FILE_NAME, "w", encoding="utf-8-sig", newline="") as file:
+def save_to_csv(articles, csv_file_name):
+    with open(csv_file_name, "w", encoding="utf-8-sig", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=["title", "url", "scraped_at"])
         writer.writeheader()
         writer.writerows(articles)
@@ -73,10 +74,18 @@ def main():
         logging.info("ニュース取得処理を開始しました。")
 
         articles = fetch_news()
-        save_to_csv(articles)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_file_name = f"{CSV_OUTPUT_DIR}/news_{timestamp}.csv"
 
-        logging.info(f"CSV保存が完了しました：{len(articles)}件")
-        print(f"CSV保存が完了しました：{len(articles)}件")
+        save_to_csv(articles, csv_file_name)
+
+        if len(articles) == 0:
+            logging.warning("該当するニュースが0件でした。")
+            print("該当するニュースが0件でした。")
+        else:
+            logging.info(f"CSV保存が完了しました：{len(articles)}件")
+            print(f"CSV保存が完了しました：{len(articles)}件")
+            print(f"保存先: {csv_file_name}")
 
     except requests.exceptions.RequestException as e:
         logging.error(f"通信エラーが発生しました：{e}")
