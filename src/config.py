@@ -11,3 +11,9 @@ USE_KEYWORDS_FILTER = True
 
 # 絞り込み対象キーワード
 KEYWORDS = ["AI", "Python", "IT"]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0"
+}
+
+DB_FILE_NAME = "output/news.db"

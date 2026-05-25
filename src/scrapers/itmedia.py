@@ -1,13 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
 
+from config import HEADERS
+
 
 def fetch_itmedia_news():
     url = "https://www.itmedia.co.jp/news/"
-    response = requests.get(url, timeout=10)
+    response = requests.get(url, headers=HEADERS, timeout=10)
     response.raise_for_status()
-
-    # 文字化け対策
     response.encoding = response.apparent_encoding
 
     soup = BeautifulSoup(response.text, "html.parser")

@@ -1,10 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
 
+from config import HEADERS
+
 
 def fetch_yahoo_news():
     url = "https://news.yahoo.co.jp/"
-    response = requests.get(url, timeout=10)
+    response = requests.get(url, headers=HEADERS, timeout=10)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")

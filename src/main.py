@@ -10,10 +10,12 @@ from config import (
     LOG_FILE_NAME,
     USE_KEYWORDS_FILTER,
     KEYWORDS,
+    DB_FILE_NAME,
 )
 
 from scrapers.yahoo import fetch_yahoo_news
 from scrapers.itmedia import fetch_itmedia_news
+from db import initialize_db, save_to_db
 
 
 os.makedirs("logs", exist_ok=True)
@@ -84,6 +86,9 @@ def main():
 
         save_to_csv(articles, csv_file_name)
         save_csv_by_source(articles, timestamp)
+        
+        initialize_db(DB_FILE_NAME)
+        save_to_db(articles, DB_FILE_NAME)
 
         if len(articles) == 0:
             logging.warning("該当するニュースが0件でした。")
